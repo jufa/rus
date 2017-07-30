@@ -3,22 +3,28 @@ var rus = (function(){
   var scaleCount = 30;
 
   var DragonScale = function(opts={}){
-    var accel = 0.1; // catchup speed in pixels per animframe
-    var maxVel = opts.maxVel | 20.0;
-    var tgt = {x: 100, y: 100};
-    var pos = {x: 0, y: 0};
+    var accel = 0.15; // catchup speed in pixels per animframe
+    var maxVel = opts.maxVel | 8.0;
+    var tgt = {x: 100.0, y: 100.0};
+    var pos = {x: 0.0, y: 0.0};
+    var lastPos = {x: 0.0, y: 0.0};
 
     var updateTarget = function(newTgt){ // newTgt = {x:int, y:int}
       tgt = newTgt;
     }
 
     var updatePosition = function(){
+      Object.assign(lastPos, pos);
       pos.x = pos.x + clamp((tgt.x - pos.x) * accel, maxVel);
       pos.y = pos.y + clamp((tgt.y - pos.y) * accel, maxVel);
     }
 
     var getPos = function(){
       return pos;
+    }
+
+    var getAngle = function() {
+      return Math.atan2(pos.y - lastPos.y, pos.x - lastPos.x);
     }
 
     var clamp = function(val, maxMag){
@@ -34,7 +40,8 @@ var rus = (function(){
     return {
       updateTarget: updateTarget,
       updatePosition: updatePosition,
-      getPos: getPos
+      getPos: getPos,
+      getAngle: getAngle
     }
   };
   
@@ -66,6 +73,8 @@ var rus = (function(){
       stage.appendChild(scaleNode);
       scaleNode.setAttribute("class", "scale");
       scaleNode.setAttribute("name", "scale");
+      scaleNode.style.width = scaleCount*2-i*2+10 + "px";
+      scaleNode.style.height = scaleCount*2-i*2+10 + "px";
     }
 
   }
@@ -93,7 +102,8 @@ var rus = (function(){
     for (let i in scales){
       var el = document.getElementsByName("scale")[i];
       var pos = scales[i].getPos();
-      el.style.transform = "translate(" + pos.x + "px ," + pos.y + "px)";
+      var angle = scales[i].getAngle();
+      el.style.transform = "translate(" + pos.x + "px ," + pos.y + "px) rotate(" + angle + "rad)";
     }
   }
 
