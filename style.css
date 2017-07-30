@@ -1,0 +1,12 @@
+#stage {
+  background-color: #000;
+  width: 100%;
+  height: 100%;
+}
+
+.scale {
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  position: absolute;
+}
