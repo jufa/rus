@@ -1,22 +1,32 @@
 var rus = (function(){
   var scales = [];
-  var scaleCount = 30;
+  var scaleCount = 60;
 
   var DragonScale = function(opts={}){
-    var accel = 0.15; // catchup speed in pixels per animframe
-    var maxVel = opts.maxVel | 8.0;
+    var width = opts.width;
+    var height = opts.height;
+    var accel = 0.25; // catchup speed in pixels per animframe
+    var maxVel = opts.maxVel | 6.0;
     var tgt = {x: 100.0, y: 100.0};
     var pos = {x: 0.0, y: 0.0};
     var lastPos = {x: 0.0, y: 0.0};
+    var angle = 0.0, lastAngle = 0.0;
+    var translationNode;
+    var rotationNode;
 
     var updateTarget = function(newTgt){ // newTgt = {x:int, y:int}
       tgt = newTgt;
     }
 
     var updatePosition = function(){
-      Object.assign(lastPos, pos);
+      lastPos.x = pos.x;
+      lastPos.y = pos.y;
       pos.x = pos.x + clamp((tgt.x - pos.x) * accel, maxVel);
       pos.y = pos.y + clamp((tgt.y - pos.y) * accel, maxVel);
+    }
+
+    var updateAngle = function(){
+      angle= Math.atan2(pos.y - lastPos.y, pos.x - lastPos.x) - Math.PI * 0.5;
     }
 
     var getPos = function(){
@@ -24,7 +34,11 @@ var rus = (function(){
     }
 
     var getAngle = function() {
-      return Math.atan2(pos.y - lastPos.y, pos.x - lastPos.x);
+      return angle;
+    }
+
+    var getSize = function(){
+      return {width: width, height: height};
     }
 
     var clamp = function(val, maxMag){
@@ -40,16 +54,18 @@ var rus = (function(){
     return {
       updateTarget: updateTarget,
       updatePosition: updatePosition,
+      updateAngle: updateAngle,
       getPos: getPos,
-      getAngle: getAngle
+      getAngle: getAngle,
+      getSize: getSize,
+      translationNode:translationNode,
+      rotationNode:rotationNode
     }
   };
   
   function startup() {
     var el = document.getElementById("stage");
     el.addEventListener("touchstart", handleMove, false);
-    // el.addEventListener("touchend", handleEnd, false);
-    // el.addEventListener("touchcancel", handleCancel, false);
     el.addEventListener("touchmove", handleMove, false);
   }
 
@@ -66,22 +82,33 @@ var rus = (function(){
   var setUpDragon = function(opts={}){
     var stage = document.getElementById("stage");
     var scaleNode;
-    var segments = opts.segments | 1;
-    for (let i = 0; i < scaleCount; i++) {
-      scales.push(new DragonScale());
-      scaleNode = document.createElement("div");
-      stage.appendChild(scaleNode);
-      scaleNode.setAttribute("class", "scale");
-      scaleNode.setAttribute("name", "scale");
-      scaleNode.style.width = scaleCount*2-i*2+10 + "px";
-      scaleNode.style.height = scaleCount*2-i*2+10 + "px";
-    }
+    var calcSize = 0.0;
+    var patternHead = document.getElementsByClassName("head")[0];
+    var patternBody = document.getElementsByClassName("scale")[0];
+    var patternArms = document.getElementsByClassName("arms")[0];
 
+    for (var i = 0; i < scaleCount; i++) {
+      calcSize = scaleCount * 1.2 - i;
+      if (i > 0) {
+        scales.push(new DragonScale({width: calcSize, height: calcSize}));
+        scaleNode = patternBody.cloneNode(true);
+        scales[i].translationNode = scaleNode;
+        scales[i].rotationNode = scaleNode.getElementsByTagName("object")[0];
+      } else if (i == 0) {
+        scales.push(new DragonScale({width: calcSize * 2, height: calcSize * 2}));
+        scaleNode = patternHead.cloneNode(true);
+        scales[i].translationNode = scaleNode;
+        scales[i].rotationNode = scaleNode.getElementsByTagName("object")[0];
+      }
+      scaleNode.style.width = scales[i].getSize().width;
+      scaleNode.style.height = scales[i].getSize().height;
+      stage.appendChild(scaleNode);
+    }
   }
 
   var updateDragonTarget = function(x, y) {
     var pos={},tgt={};
-    for (var i in scales){
+    for (var i = 0; i < scaleCount; i++){
       if (i == 0) {
         scales[i].updateTarget({x: x, y: y})
       } else {
@@ -92,18 +119,25 @@ var rus = (function(){
   }
 
   var updateDragonPosition = function() {
-    for (var i in scales){
+    for (var i = 0; i < scaleCount; i++){
       scales[i].updatePosition();
+      scales[i].updateAngle();
     }
   }
 
   var render = function(){
     updateDragonPosition();
-    for (let i in scales){
-      var el = document.getElementsByName("scale")[i];
+    
+    for (var i = 0; i < scaleCount; i++){
       var pos = scales[i].getPos();
       var angle = scales[i].getAngle();
-      el.style.transform = "translate(" + pos.x + "px ," + pos.y + "px) rotate(" + angle + "rad)";
+      var size = scales[i].getSize();
+      var tx = pos.x;
+      var ty = pos.y;
+      var str = "translate(" + tx + "px ," + ty + "px)";
+      scales[i].translationNode.style.transform = str;
+      str = "rotate(" + angle + "rad)";
+      scales[i].rotationNode.style.transform = str;
     }
   }
 
